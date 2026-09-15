@@ -62,7 +62,7 @@ async function dashboard(db, url, {values, editing = false, error = '', status =
   const externalIcon = /^https?:\/\//i.test(v.icon_url || '') ? v.icon_url : '';
   const messages = {saved:'保存しました。',updated:'変更を保存しました。',deleted:'削除しました。',changed:'設定を変更しました。',enabled:'転送を有効にしました。'};
   const notice = error || messages[url.searchParams.get('notice')] || '';
-  const body = `<header class="logo-container"><img src="${DEFAULT_ICON}" alt="" class="logo-img"><div><h1 class="brand-name">Favirect</h1><p class="brand-description">自分だけのショートカット</p></div></header>
+  const body = `<header class="logo-container"><h1 class="logo-heading"><img src="${DEFAULT_ICON}" alt="Favirect" class="logo-img"></h1></header>
 <div id="feedback" role="${error ? 'alert' : 'status'}" class="feedback ${error ? 'error' : ''}" ${notice ? '' : 'hidden'}>${h(notice)}</div>
 <section id="editor" class="editor" aria-labelledby="editor-title"><h2 id="editor-title">${editing ? 'リンクを編集' : '新しいリンクを追加'}</h2>
 <form method="POST" action="/" enctype="multipart/form-data" id="link-form">
@@ -203,10 +203,9 @@ button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible{o
 h1{font-size:24px;overflow-wrap:anywhere;line-height:1.45}
 h2{font-size:17px;font-weight:700;letter-spacing:.01em;line-height:1.5;margin:0;color:var(--ink)}
 h3{font-size:16px;font-weight:650;margin:0;overflow-wrap:anywhere;line-height:1.6}
-.logo-container{display:flex;align-items:center;gap:14px;margin-bottom:40px}
-.logo-img{width:48px;height:48px;object-fit:contain;display:block}
-.brand-name{font-size:26px;font-weight:750;letter-spacing:-.035em;margin:0;line-height:1.25}
-.brand-description{font-size:12px;color:var(--muted);margin:4px 0 0}
+.logo-container{margin-bottom:40px}
+.logo-heading{margin:0;line-height:1}
+.logo-img{width:240px;max-width:100%;height:auto;display:block}
 .editor{scroll-margin-top:24px}
 .editor>h2{display:flex;align-items:center;gap:10px;padding-bottom:16px;border-bottom:1px solid var(--line)}
 .editor>h2:before{content:"";width:4px;height:18px;background:var(--brand);flex-shrink:0}
@@ -229,10 +228,10 @@ input[type=file]::file-selector-button{font:inherit;color:var(--link);background
 .preview p{margin:2px 0 0;font-weight:650;font-size:16px;overflow-wrap:anywhere}
 .switch-row{display:flex;align-items:center;gap:12px;position:relative;min-height:48px;cursor:pointer;font-size:14px;font-weight:600}
 .switch-row input{position:absolute;opacity:0;width:44px;height:44px;margin:0}
-.track{width:40px;height:22px;display:inline-block;position:relative;background:var(--off);border:1px solid #64748b;border-radius:22px;flex-shrink:0;transition:background-color .16s ease}
-.track>span{position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#fff;border:1px solid #64748b;transition:transform .18s ease}
-.checked,input:checked+.track{background:var(--brand);border-color:var(--link)}
-.checked>span,input:checked+.track>span{transform:translateX(18px);border-color:var(--link)}
+.track{width:40px;height:22px;display:inline-block;position:relative;background:var(--off);border:0;border-radius:22px;flex-shrink:0;transition:background-color .16s ease}
+.track>span{position:absolute;left:4px;top:4px;width:14px;height:14px;border-radius:50%;background:#fff;border:0;transition:transform .18s ease}
+.checked,input:checked+.track{background:var(--brand)}
+.checked>span,input:checked+.track>span{transform:translateX(18px)}
 .switch-row input:focus-visible+.track{outline:3px solid var(--link);outline-offset:4px}
 .submit-btn{width:100%;padding:14px 20px;margin-top:24px;border:0;border-radius:6px;background:var(--brand);color:var(--ink);font-weight:700;font-size:15px;min-height:52px;transition:background-color .16s ease}
 .submit-btn:hover{background:#62bfff}
