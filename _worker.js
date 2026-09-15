@@ -45,6 +45,10 @@ function renderItems(items, origin) {
 function checkbox(name, label, checked) {
   return `<label class="switch-row"><input type="checkbox" id="${name}" name="${name}" value="1" ${checked ? 'checked' : ''}><span class="track" aria-hidden="true"><span></span></span><span>${label}</span></label>`;
 }
+function renderAccordion(items, origin, kind) {
+  const title = kind === 'public' ? '公開リダイレクト一覧' : '<b>非</b>公開リダイレクト一覧';
+  return `<details class="accordion" id="${kind}-links"><summary><h2>${title}</h2><span class="summary-meta"><span class="count">${items.length}<span class="sr-only">件</span></span><svg class="accordion-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary><div class="list">${renderItems(items,origin)}</div></details>`;
+}
 async function dashboard(db, url, {values, editing = false, error = '', status = 200} = {}) {
   const {results = []} = await db.prepare('SELECT * FROM links ORDER BY rowid DESC').all();
   if (!values && url.searchParams.has('edit')) {
@@ -58,9 +62,9 @@ async function dashboard(db, url, {values, editing = false, error = '', status =
   const externalIcon = /^https?:\/\//i.test(v.icon_url || '') ? v.icon_url : '';
   const messages = {saved:'保存しました。',updated:'変更を保存しました。',deleted:'削除しました。',changed:'設定を変更しました。',enabled:'転送を有効にしました。'};
   const notice = error || messages[url.searchParams.get('notice')] || '';
-  const body = `<header class="logo-container"><img src="${DEFAULT_ICON}" alt="Favirect" class="logo-img"></header>
+  const body = `<header class="logo-container"><img src="${DEFAULT_ICON}" alt="" class="logo-img"><div><h1 class="brand-name">Favirect</h1><p class="brand-description">自分だけのショートカット</p></div></header>
 <div id="feedback" role="${error ? 'alert' : 'status'}" class="feedback ${error ? 'error' : ''}" ${notice ? '' : 'hidden'}>${h(notice)}</div>
-<details id="editor" class="editor" ${editing || error || !results.length ? 'open' : ''}><summary>${editing ? 'リンクを編集' : '新しいリンクを追加'}</summary>
+<section id="editor" class="editor" aria-labelledby="editor-title"><h2 id="editor-title">${editing ? 'リンクを編集' : '新しいリンクを追加'}</h2>
 <form method="POST" action="/" enctype="multipart/form-data" id="link-form">
 ${hidden('action',editing ? 'update' : 'create')}
 <div class="form-group"><label for="id">識別ID${editing ? '（変更できません）' : '（半角英数字・ハイフン・アンダーバー）'}</label><input type="text" id="id" name="id" value="${h(v.id)}" ${editing ? 'readonly' : 'pattern="[A-Za-z0-9_-]{1,64}" maxlength="64"'} placeholder="myapp" required></div>
@@ -72,9 +76,11 @@ ${editing ? '<p class="muted hint">新しい画像を指定しなければ、現
 <div class="preview"><img id="preview-icon" src="${h(safeIcon(previewIcon))}" data-current="${h(safeIcon(previewIcon))}" data-default="${DEFAULT_ICON}" alt=""><div><span class="muted hint">プレビュー</span><p id="preview-title">${h(v.title || v.id || 'アプリ名')}</p><span id="preview-error" class="muted hint" role="status"></span></div></div>
 ${checkbox('is_active','転送を有効にする',v.is_active === 1)}${checkbox('is_public','公開リダイレクトにする',v.is_public == null || v.is_public === 1)}
 <button class="submit-btn" type="submit">${editing ? '変更を保存する' : '保存する'}</button>${editing ? '<a class="cancel" href="/">編集をキャンセル</a>' : ''}
-</form></details>
-<h2>公開リダイレクト一覧</h2><div class="list">${renderItems(results.filter(x => x.is_public == null || x.is_public === 1),url.origin)}</div>
-<details class="accordion"><summary><span><b>非</b>公開リダイレクト一覧</span></summary><div class="list">${renderItems(results.filter(x => x.is_public != null && x.is_public !== 1),url.origin)}</div></details>
+</form></section>
+<div class="redirect-lists">
+${renderAccordion(results.filter(x => x.is_public == null || x.is_public === 1),url.origin,'public')}
+${renderAccordion(results.filter(x => x.is_public != null && x.is_public !== 1),url.origin,'private')}
+</div>
 <p class="muted hint privacy-note">「非公開」は一覧の分類です。アクセス制限はありません。</p>`;
   return page('Favirect Dashboard',body,{status,script:true});
 }
@@ -181,10 +187,106 @@ export default {
     }
   }
 };
+// WCAG-informed contrast, touch targets and reduced-motion support.
+// Spring timing is a visual design choice, not a claim of measured UX performance.
 const CSS = `
-*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#0f172a;background-color:#fcfeff;background-image:radial-gradient(circle,#dae4e6 2px,transparent 2px);background-position:0 0;background-size:34px 34px;line-height:1.7;padding:48px 20px}.container{max-width:560px;margin:0 auto}button,input{font:inherit}button,a,input,summary{-webkit-tap-highlight-color:transparent}button,a{touch-action:manipulation}a{color:#126ba0}button{cursor:pointer}button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible{outline:3px solid #126ba0;outline-offset:4px}h1{font-size:22px;overflow-wrap:anywhere}h2{font-size:15px;color:#38aefc;margin:36px 0 0;padding-bottom:10px;border-bottom:1px solid #cbd5e1}h3{font-size:16px;margin:0;overflow-wrap:anywhere}.logo-container{margin-bottom:28px}.logo-img{max-width:180px;height:auto;display:block}.editor>summary,.accordion>summary{cursor:pointer;font-weight:700;padding:14px 0;min-height:48px}.editor>summary{color:#126ba0;border-bottom:1px solid #cbd5e1}.accordion{margin-top:24px}.accordion>summary{color:#38aefc;border-bottom:1px solid #cbd5e1}.accordion b{font-weight:900;color:#0f172a}#link-form{padding-top:20px}.form-group{margin-bottom:20px}.form-group>label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}input[type=text],input[type=url],input[type=file]{width:100%;min-height:48px;padding:12px 0;color:#0f172a;font-size:16px;border:0;border-bottom:1px solid #cbd5e1;background:transparent;border-radius:0}input[readonly]{color:#64748b}input:focus{border-bottom-color:#38aefc}.muted{color:#526174}.hint{font-size:12px;margin:6px 0}.remove-row{display:flex;gap:8px;align-items:center;min-height:44px;font-size:14px}.preview{display:flex;gap:14px;align-items:center;padding:20px 0;border-bottom:1px solid #cbd5e1;margin-bottom:12px}.preview img{width:56px;height:56px;object-fit:cover;border-radius:12px}.preview>div{min-width:0}.preview p{margin:0;font-weight:700;overflow-wrap:anywhere}.switch-row{display:flex;align-items:center;gap:12px;position:relative;min-height:48px;cursor:pointer;font-size:14px;font-weight:600}.switch-row input{position:absolute;opacity:0;width:44px;height:44px;margin:0}.track{width:38px;height:20px;display:inline-block;position:relative;background:#dbdbdb;border-radius:20px;flex-shrink:0}.track>span{position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .15s}.checked,input:checked+.track{background:#38aefc}.checked>span,input:checked+.track>span{transform:translateX(18px)}.switch-row input:focus-visible+.track{outline:3px solid #126ba0;outline-offset:4px}.submit-btn{width:100%;padding:14px;margin-top:20px;border:0;border-radius:6px;background:#38aefc;color:#0f172a;font-weight:700;min-height:48px}.submit-btn:hover{background:#62bfff}.cancel{display:block;text-align:center;padding:12px}.item{padding:20px 0;border-bottom:1px solid #cbd5e1}.item-header{display:flex;align-items:center;gap:12px}.item-icon{width:36px;height:36px;object-fit:cover;border-radius:8px;flex-shrink:0}.item-meta{min-width:0}.item-id{font-size:12px;overflow-wrap:anywhere}.item-url{font-size:13px;color:#475569;overflow-wrap:anywhere;margin:8px 0 4px;padding-left:48px}.item-controls{padding-left:48px}.states,.item-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.inline-form{margin:0}.state-button{display:flex;align-items:center;gap:8px;min-width:80px;min-height:44px;border:0;background:transparent;padding:0;color:#334155;font-size:13px}.item-actions{gap:14px}.item-actions a,.item-actions button{display:inline-flex;align-items:center;min-height:44px;padding:4px 0;border:0;background:transparent;font-size:13px;color:#126ba0;text-decoration:none;font-weight:600}.item-actions .delete-btn{color:#b42318}.item-actions a:hover,.item-actions button:hover{text-decoration:underline}.feedback{padding:12px 0;border-bottom:1px solid #cbd5e1;margin-bottom:16px;font-size:14px;overflow-wrap:anywhere}.error{color:#b42318}.empty{font-size:14px;padding:16px 0}.privacy-note{margin-top:16px}.notice-box{padding:20px 0 32px;border-bottom:1px solid #cbd5e1}.badge{display:inline-block;background:#ffa200;color:#0f172a;font-size:12px;font-weight:700;padding:4px 10px;border-radius:3px}.message-body{white-space:pre-line;font-size:15px}.domain-highlight{color:#ffa200;font-weight:700}[hidden]{display:none!important}@media(max-width:420px){body{padding:28px 16px}.item-controls,.item-url{padding-left:0}.item-actions{gap:18px}.logo-img{max-width:150px}}@media(prefers-reduced-motion:reduce){*{transition:none!important}}`;
+:root{--paper:#fcfeff;--ink:#0f172a;--muted:#475569;--brand:#38aefc;--link:#105f91;--accent:#ffa200;--line:#cbd5e1;--off:#dbdbdb;--spring:cubic-bezier(.22,1.35,.36,1)}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;color:var(--ink);background-color:#fcfeff;background-image:radial-gradient(circle,#dae4e6 2px,transparent 2px);background-position:0 0;background-size:34px 34px;line-height:1.7;padding:48px 24px 64px;-webkit-text-size-adjust:100%}
+.container{max-width:600px;margin:0 auto}
+button,input{font:inherit}
+button,a,input,summary{-webkit-tap-highlight-color:transparent}
+button,a,summary{touch-action:manipulation}
+a{color:var(--link);text-underline-offset:4px}
+button{cursor:pointer}
+button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible{outline:3px solid var(--link);outline-offset:4px}
+h1{font-size:24px;overflow-wrap:anywhere;line-height:1.45}
+h2{font-size:17px;font-weight:700;letter-spacing:.01em;line-height:1.5;margin:0;color:var(--ink)}
+h3{font-size:16px;font-weight:650;margin:0;overflow-wrap:anywhere;line-height:1.6}
+.logo-container{display:flex;align-items:center;gap:14px;margin-bottom:40px}
+.logo-img{width:48px;height:48px;object-fit:contain;display:block}
+.brand-name{font-size:26px;font-weight:750;letter-spacing:-.035em;margin:0;line-height:1.25}
+.brand-description{font-size:12px;color:var(--muted);margin:4px 0 0}
+.editor{scroll-margin-top:24px}
+.editor>h2{display:flex;align-items:center;gap:10px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.editor>h2:before{content:"";width:4px;height:18px;background:var(--brand);flex-shrink:0}
+#link-form{padding-top:24px}
+.form-group{margin-bottom:22px}
+.form-group>label{display:block;font-size:13px;font-weight:650;margin-bottom:4px;color:#334155}
+input[type=text],input[type=url],input[type=file]{display:block;width:100%;min-width:0;min-height:48px;padding:12px 0;color:var(--ink);font-size:16px;border:0;border-bottom:1px solid #64748b;background:transparent;border-radius:0;transition:border-color .16s ease}
+input::placeholder{color:#526174;opacity:1}
+input[readonly]{color:var(--muted)}
+input:focus{border-bottom-color:var(--link)}
+input[type=file]{font-size:14px;overflow:hidden;padding:8px 0}
+input[type=file]::file-selector-button{font:inherit;color:var(--link);background:#e6f4fe;border:0;border-radius:4px;min-height:44px;padding:8px 12px;margin-right:12px;cursor:pointer}
+.muted{color:var(--muted)}
+.hint{font-size:12px;margin:8px 0;line-height:1.8}
+.remove-row{display:flex;gap:10px;align-items:center;min-height:44px;font-size:14px}
+.remove-row input{width:20px;height:20px;accent-color:var(--link)}
+.preview{display:flex;gap:16px;align-items:center;padding:20px 0;border-bottom:1px solid var(--line);margin-bottom:12px}
+.preview img{width:56px;height:56px;object-fit:cover;border-radius:10px;flex-shrink:0}
+.preview>div{min-width:0}
+.preview p{margin:2px 0 0;font-weight:650;font-size:16px;overflow-wrap:anywhere}
+.switch-row{display:flex;align-items:center;gap:12px;position:relative;min-height:48px;cursor:pointer;font-size:14px;font-weight:600}
+.switch-row input{position:absolute;opacity:0;width:44px;height:44px;margin:0}
+.track{width:40px;height:22px;display:inline-block;position:relative;background:var(--off);border:1px solid #64748b;border-radius:22px;flex-shrink:0;transition:background-color .16s ease}
+.track>span{position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#fff;border:1px solid #64748b;transition:transform .18s ease}
+.checked,input:checked+.track{background:var(--brand);border-color:var(--link)}
+.checked>span,input:checked+.track>span{transform:translateX(18px);border-color:var(--link)}
+.switch-row input:focus-visible+.track{outline:3px solid var(--link);outline-offset:4px}
+.submit-btn{width:100%;padding:14px 20px;margin-top:24px;border:0;border-radius:6px;background:var(--brand);color:var(--ink);font-weight:700;font-size:15px;min-height:52px;transition:background-color .16s ease}
+.submit-btn:hover{background:#62bfff}
+.cancel{display:block;text-align:center;padding:12px;min-height:48px}
+.redirect-lists{margin-top:40px}
+.accordion{margin:0}
+.accordion>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;cursor:pointer;list-style:none;min-height:64px;padding:16px 0;border-bottom:1px solid var(--line);user-select:none}
+.accordion>summary::-webkit-details-marker{display:none}
+.accordion>summary::marker{content:""}
+.accordion>summary h2{font-size:15px;flex:1;min-width:0}
+.accordion b{font-weight:900}
+.summary-meta{display:flex;gap:12px;align-items:center;flex-shrink:0}
+.count{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--muted)}
+.accordion-arrow{display:block;color:var(--link);transform:rotate(-90deg);transform-origin:50% 50%;transition:transform 320ms var(--spring)}
+.accordion[open]>summary .accordion-arrow{transform:rotate(0deg)}
+.accordion>summary:hover h2{color:var(--link)}
+.accordion[open]>summary{border-bottom-color:var(--brand)}
+.item{padding:24px 0 20px;border-bottom:1px solid var(--line)}
+.item-header{display:flex;align-items:center;gap:12px}
+.item-icon{width:36px;height:36px;object-fit:cover;border-radius:7px;flex-shrink:0}
+.item-meta{min-width:0}
+.item-id{font-size:12px;overflow-wrap:anywhere}
+.item-url{font-size:13px;color:var(--muted);overflow-wrap:anywhere;margin:10px 0 8px;padding-left:48px}
+.item-controls{padding-left:48px}
+.states,.item-actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.inline-form{margin:0}
+.state-button{display:flex;align-items:center;gap:10px;min-width:88px;min-height:44px;border:0;background:transparent;padding:0;color:#334155;font-size:13px}
+.item-actions{gap:8px;margin:4px -8px 0}
+.item-actions a,.item-actions button{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:8px;border:0;border-radius:4px;background:transparent;font-size:13px;color:var(--link);text-decoration:none;font-weight:600}
+.item-actions .delete-btn{color:#b42318}
+.item-actions a:hover,.item-actions button:hover{background:#e6f4fe;text-decoration:underline}
+.feedback{padding:12px 0;border-bottom:1px solid var(--line);margin-bottom:24px;font-size:14px;overflow-wrap:anywhere}
+.error{color:#b42318}
+.empty{font-size:14px;padding:16px 0;margin:0;border-bottom:1px solid var(--line)}
+.privacy-note{margin-top:16px}
+.notice-box{padding:20px 0 32px;border-bottom:1px solid var(--line)}
+.badge{display:inline-block;background:var(--accent);color:var(--ink);font-size:12px;font-weight:700;padding:4px 10px;border-radius:3px}
+.message-body{white-space:pre-line;font-size:15px}
+.domain-highlight{color:var(--ink);font-weight:700;text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:3px;text-underline-offset:4px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+[hidden]{display:none!important}
+@media(max-width:420px){body{padding:28px 20px 48px}.logo-container{margin-bottom:32px}.item-controls,.item-url{padding-left:0}.item-actions{gap:8px}.accordion>summary{gap:8px}.summary-meta{gap:8px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+`;
 const CLIENT = String.raw`
 (() => {
+  // Remember each list independently through POST redirects; storage is optional.
+  document.querySelectorAll('details.accordion').forEach(details => {
+    const key = 'favirect:accordion:' + details.id;
+    try { details.open = sessionStorage.getItem(key) === 'open'; } catch {}
+    details.addEventListener('toggle', () => {
+      try { sessionStorage.setItem(key, details.open ? 'open' : 'closed'); } catch {}
+    });
+  });
   const form = document.querySelector('#link-form');
   const feedback = document.querySelector('#feedback');
   const notify = text => { feedback.textContent = text; feedback.hidden = false; };
